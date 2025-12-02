@@ -29,7 +29,8 @@ header('Location: users.php'); exit;
 $users = $pdo->query('SELECT id_usuario,nome_completo,email,tipo_usuario,data_criacao FROM usuario')->fetchAll();
 ?>
 <!doctype html>
-<html><head><meta charset="utf-8"><title>Usuários - PAGTREM</title><link rel="stylesheet" href="style/style.css"></head><body>
+<html><head>
+<link rel="stylesheet" href="/style/style.css"><meta charset="utf-8"><title>Usuários - PAGTREM</title><link rel="stylesheet" href="style/style.css"></head><body>
 <div class="header"><div class="container"><div style="display:flex;justify-content:space-between;align-items:center"><h1>PAGTREM</h1><a style="color:#fff" href="dashboard.php">Voltar</a></div></div></div>
 <div class="container">
 <div class="card">
@@ -38,6 +39,4 @@ $users = $pdo->query('SELECT id_usuario,nome_completo,email,tipo_usuario,data_cr
 <form method="post">
 <input type="hidden" name="action" value="create">
 <label>Nome</label><input name="nome">
-<label>Email</label><input name="email" type="email">
-<label>Senha</label><input name="senha" type="password">
-<label>Tipo (1 user / 2 admin)</label><input name="tipo" type="number" value="1">
+<l
