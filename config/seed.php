@@ -20,8 +20,8 @@ try {
     
     if (!$stmt->fetch()) {
         // Cria o usuário admin
-        // Senha: lucas123
-        $senhaHash = password_hash('lucas123', PASSWORD_DEFAULT);
+        // Senha: 1234
+        $senhaHash = password_hash('1234', PASSWORD_DEFAULT);
         
         $stmt = $pdo->prepare("
             INSERT INTO usuarios (username, nome_completo, email, senha, role, status) 
@@ -39,7 +39,7 @@ try {
         
         echo "<p style='color:green'>✅ Usuário admin criado com sucesso!</p>";
         echo "<p><strong>Username:</strong> admin</p>";
-        echo "<p><strong>Senha:</strong> lucas123</p>";
+        echo "<p><strong>Senha:</strong> 1234</p>";
     } else {
         echo "<p style='color:blue'>ℹ️ Usuário admin já existe.</p>";
     }

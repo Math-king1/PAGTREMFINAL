@@ -80,7 +80,7 @@ INSERT INTO usuarios (
     '00000000000',
     NULL,
     NULL,
-    '$2y$10$uC4n48xo/tbNYt2KBsMj5OJmMPo9pLDZ0LxWFiIu5jrfHrClvbB1e',
+    '1234',
     'admin'
 );
 
