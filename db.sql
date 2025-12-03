@@ -62,11 +62,28 @@ CREATE TABLE notificacoes (
 
 -- ==============================================
 -- SEED: Usuario Admin
--- Username: admin
--- Senha: lucas123
--- ==============================================
-INSERT INTO usuarios (id, username, senha, cargo)
-VALUES (1, 'admin', '$2y$10$uC4n48xo/tbNYt2KBsMj5OJmMPo9pLDZ0LxWFiIu5jrfHrClvbB1e', 'admin');
+INSERT INTO usuarios (
+    id,
+    username,
+    nome_completo,
+    email,
+    telefone,
+    cep,
+    cpf,
+    senha,
+    role
+) VALUES (
+    1,
+    'admin',
+    'Administrador do Sistema',
+    'admin@pagtrem.com',
+    '00000000000',
+    NULL,
+    NULL,
+    '$2y$10$uC4n48xo/tbNYt2KBsMj5OJmMPo9pLDZ0LxWFiIu5jrfHrClvbB1e',
+    'admin'
+);
+
 
 
 -- ==============================================
