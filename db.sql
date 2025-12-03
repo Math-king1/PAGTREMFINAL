@@ -65,8 +65,9 @@ CREATE TABLE notificacoes (
 -- Username: admin
 -- Senha: lucas123
 -- ==============================================
-INSERT INTO usuarios (username, nome_completo, email, senha, role, status) VALUES
-('admin', 'Administrador do Sistema', 'admin@pagtrem.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'ativo');
+INSERT INTO usuarios (id, username, senha, cargo)
+VALUES (1, 'admin', '$2y$10$uC4n48xo/tbNYt2KBsMj5OJmMPo9pLDZ0LxWFiIu5jrfHrClvbB1e', 'admin');
+
 
 -- ==============================================
 -- SEED: Dados de exemplo - Trens
