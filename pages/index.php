@@ -36,14 +36,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo = getConnection();
             
             // Busca por username ou email
-            $stmt = $pdo->prepare("
-                SELECT id, username, nome_completo, email, senha, role, status 
-                FROM usuarios 
-                WHERE (username = ? OR email = ?) 
-                LIMIT 1
-            ");
-            $stmt->execute([$login, $login]);
-            $user = $stmt->fetch();
+            $mysqli = getConnection();
+
+            $stmt = $mysqli->prepare("
+                  SELECT id, username, nome_completo, email, senha, role, status 
+                 FROM usuarios 
+                 WHERE (username = ? OR email = ?)
+                 LIMIT 1
+             ");
+                $stmt->bind_param("ss", $login, $login);
+                $stmt->execute();
+            $result = $stmt->get_result();
+            $user = $result->fetch_assoc();
+
             
             if ($user && password_verify($senha, $user['senha'])) {
                 // Verifica se está ativo
