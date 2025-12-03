@@ -1,7 +1,7 @@
 <?php
 /**
  * PAGTREM - Configuração do Banco de Dados
- * Conexão PDO com MySQL
+ * Conexão MySQLi com MySQL
  */
 
 // Configurações do banco de dados
@@ -12,29 +12,26 @@ define('DB_PASS', '');              // Altere conforme seu ambiente
 define('DB_CHARSET', 'utf8mb4');
 
 /**
- * Cria e retorna a conexão PDO
- * @return PDO
+ * Cria e retorna a conexão MySQLi
+ * @return mysqli
  */
-function getConnection(): PDO {
-    static $pdo = null;
+function getConnection(): mysqli {
+    static $mysqli = null;
     
-    if ($pdo === null) {
+    if ($mysqli === null) {
+        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+        
         try {
-            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
-            $options = [
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES   => false,
-            ];
-            $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
-        } catch (PDOException $e) {
+            $mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+            $mysqli->set_charset(DB_CHARSET);
+        } catch (mysqli_sql_exception $e) {
             // Log do erro (em produção, não exibir detalhes)
             error_log("Erro de conexão: " . $e->getMessage());
             die("Erro ao conectar ao banco de dados. Verifique as configurações.");
         }
     }
     
-    return $pdo;
+    return $mysqli;
 }
 
 /**
