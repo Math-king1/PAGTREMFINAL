@@ -1,6 +1,6 @@
 <?php
 /**
- * PAGTREM - Página de Cadastro
+ * PAGTREM - Página de Registro
  */
 
 require_once __DIR__ . '/../config/database.php';
@@ -9,74 +9,93 @@ initSession();
 
 // Se já estiver logado, redireciona
 if (isLoggedIn()) {
-    redirect('user/dashboard.php');
+    if (isAdmin()) {
+        redirect('admin/dashboard.php');
+    } else {
+        redirect('user/dashboard.php');
+    }
 }
 
 $errors = [];
-$success = false;
 
-// Processa o cadastro
+// Processa o registro
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
-    $nome = trim($_POST['nome'] ?? '');
+    $nome_completo = trim($_POST['nome_completo'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $telefone = trim($_POST['telefone'] ?? '');
     $senha = $_POST['senha'] ?? '';
-    $senha2 = $_POST['senha2'] ?? '';
-    
+    $confirmar_senha = $_POST['confirmar_senha'] ?? '';
+
     // Validações
-    if (strlen($username) < 3) {
-        $errors[] = 'O nome de usuário deve ter pelo menos 3 caracteres.';
+    if (empty($username) || strlen($username) < 3 || !preg_match('/^[a-zA-Z0-9_]+$/', $username)) {
+        $errors[] = 'Username deve ter pelo menos 3 caracteres e conter apenas letras, números e underscore.';
     }
-    if (!preg_match('/^[a-zA-Z0-9_]+$/', $username)) {
-        $errors[] = 'O nome de usuário pode conter apenas letras, números e underscore.';
+    if (empty($nome_completo) || strlen($nome_completo) > 120) {
+        $errors[] = 'Nome completo é obrigatório e deve ter no máximo 120 caracteres.';
     }
-    if (strlen($nome) < 3) {
-        $errors[] = 'O nome completo deve ter pelo menos 3 caracteres.';
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'E-mail válido é obrigatório.';
     }
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'E-mail inválido.';
+    if (empty($senha) || strlen($senha) < 6) {
+        $errors[] = 'Senha deve ter pelo menos 6 caracteres.';
     }
-    if (strlen($senha) < 4) {
-        $errors[] = 'A senha deve ter pelo menos 4 caracteres.';
+    if ($senha !== $confirmar_senha) {
+        $errors[] = 'As senhas não coincidem.';
     }
-    if ($senha !== $senha2) {
-        $errors[] = 'As senhas não conferem.';
-    }
-    
+
     if (empty($errors)) {
         try {
-            $pdo = getConnection();
-            
+            $mysqli = getConnection();
+
             // Verifica se username já existe
-            $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE username = ?");
-            $stmt->execute([$username]);
-            if ($stmt->fetch()) {
-                $errors[] = 'Este nome de usuário já está em uso.';
+            $stmt = $mysqli->prepare("SELECT id FROM usuarios WHERE username = ? LIMIT 1");
+            $stmt->bind_param("s", $username);
+            $stmt->execute();
+            if ($stmt->get_result()->num_rows > 0) {
+                $errors[] = 'Username já está em uso.';
             }
-            
+
             // Verifica se email já existe
-            $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE email = ?");
-            $stmt->execute([$email]);
-            if ($stmt->fetch()) {
-                $errors[] = 'Este e-mail já está cadastrado.';
+            $stmt = $mysqli->prepare("SELECT id FROM usuarios WHERE email = ? LIMIT 1");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            if ($stmt->get_result()->num_rows > 0) {
+                $errors[] = 'E-mail já está cadastrado.';
             }
-            
+
             if (empty($errors)) {
-                // Insere o novo usuário
-                $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
-                
-                $stmt = $pdo->prepare("
-                    INSERT INTO usuarios (username, nome_completo, email, telefone, senha, role, status) 
-                    VALUES (?, ?, ?, ?, ?, 'user', 'ativo')
-                ");
-                $stmt->execute([$username, $nome, $email, $telefone, $senhaHash]);
-                
-                $success = true;
+                // Hash da senha
+                $senha_hash = password_hash($senha, PASSWORD_DEFAULT);
+
+                // Insere novo usuário
+                $stmt = $mysqli->prepare("INSERT INTO usuarios (username, nome_completo, email, telefone, senha) VALUES (?, ?, ?, ?, ?)");
+                $stmt->bind_param("sssss", $username, $nome_completo, $email, $telefone, $senha_hash);
+                $stmt->execute();
+
+                // Login automático após registro
+                $user_id = $mysqli->insert_id;
+                $stmt = $mysqli->prepare("SELECT id, username, nome_completo, email, role FROM usuarios WHERE id = ?");
+                $stmt->bind_param("i", $user_id);
+                $stmt->execute();
+                $user = $stmt->get_result()->fetch_assoc();
+
+                $_SESSION['user'] = [
+                    'id' => $user['id'],
+                    'username' => $user['username'],
+                    'nome' => $user['nome_completo'],
+                    'email' => $user['email'],
+                    'role' => $user['role']
+                ];
+
+                session_regenerate_id(true);
+
+                // Redireciona para dashboard do usuário
+                redirect('user/dashboard.php');
             }
-        } catch (PDOException $e) {
-            error_log("Erro no cadastro: " . $e->getMessage());
-            $errors[] = 'Erro ao processar cadastro. Tente novamente.';
+        } catch (mysqli_sql_exception $e) {
+            error_log("Erro no registro: " . $e->getMessage());
+            $errors[] = 'Erro ao processar registro. Tente novamente.';
         }
     }
 }
@@ -86,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAGTREM - Cadastro</title>
+    <title>PAGTREM - Registro</title>
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
@@ -94,116 +113,111 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="auth-card">
             <div class="auth-logo">
                 <h1>🚆 PAGTREM</h1>
-                <p>Criar nova conta</p>
+                <p>Cadastre-se no Sistema de Gerenciamento de Trens</p>
             </div>
-            
-            <?php if ($success): ?>
-                <div class="alert alert-success">
-                    Cadastro realizado com sucesso! <a href="index.php">Faça login</a>
+
+            <?php if (!empty($errors)): ?>
+                <div class="alert alert-error">
+                    <?= implode('<br>', array_map('e', $errors)) ?>
                 </div>
-            <?php else: ?>
-                
-                <?php if (!empty($errors)): ?>
-                    <div class="alert alert-error">
-                        <?= implode('<br>', array_map('e', $errors)) ?>
-                    </div>
-                <?php endif; ?>
-                
-                <form method="POST" data-validate>
-                    <div class="form-group">
-                        <label class="form-label required" for="username">Nome de Usuário</label>
-                        <input 
-                            type="text" 
-                            id="username" 
-                            name="username" 
-                            class="form-control" 
-                            placeholder="Ex: joao123"
-                            value="<?= e($_POST['username'] ?? '') ?>"
-                            required
-                        >
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label required" for="nome">Nome Completo</label>
-                        <input 
-                            type="text" 
-                            id="nome" 
-                            name="nome" 
-                            class="form-control" 
-                            placeholder="Seu nome completo"
-                            value="<?= e($_POST['nome'] ?? '') ?>"
-                            required
-                        >
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label required" for="email">E-mail</label>
-                        <input 
-                            type="email" 
-                            id="email" 
-                            name="email" 
-                            class="form-control" 
-                            placeholder="seu@email.com"
-                            value="<?= e($_POST['email'] ?? '') ?>"
-                            required
-                        >
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="telefone">Telefone</label>
-                        <input 
-                            type="text" 
-                            id="telefone" 
-                            name="telefone" 
-                            class="form-control" 
-                            placeholder="(11) 99999-9999"
-                            value="<?= e($_POST['telefone'] ?? '') ?>"
-                        >
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label required" for="senha">Senha</label>
-                            <input 
-                                type="password" 
-                                id="senha" 
-                                name="senha" 
-                                class="form-control" 
-                                placeholder="Mínimo 4 caracteres"
-                                required
-                            >
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label required" for="senha2">Confirmar Senha</label>
-                            <input 
-                                type="password" 
-                                id="senha2" 
-                                name="senha2" 
-                                class="form-control" 
-                                placeholder="Repita a senha"
-                                required
-                            >
-                        </div>
-                    </div>
-                    
-                    <div class="form-group mt-2">
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">
-                            Cadastrar
-                        </button>
-                    </div>
-                    
-                    <div class="text-center mt-2">
-                        <p class="text-muted">
-                            Já tem conta? <a href="index.php">Faça login</a>
-                        </p>
-                    </div>
-                </form>
             <?php endif; ?>
+
+            <form method="POST" data-validate>
+                <div class="form-group">
+                    <label class="form-label required" for="username">Username</label>
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        class="form-control"
+                        placeholder="Digite seu username"
+                        value="<?= e($_POST['username'] ?? '') ?>"
+                        required
+                        pattern="[a-zA-Z0-9_]+"
+                        minlength="3"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required" for="nome_completo">Nome Completo</label>
+                    <input
+                        type="text"
+                        id="nome_completo"
+                        name="nome_completo"
+                        class="form-control"
+                        placeholder="Digite seu nome completo"
+                        value="<?= e($_POST['nome_completo'] ?? '') ?>"
+                        required
+                        maxlength="120"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required" for="email">E-mail</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        class="form-control"
+                        placeholder="Digite seu e-mail"
+                        value="<?= e($_POST['email'] ?? '') ?>"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="telefone">Telefone</label>
+                    <input
+                        type="text"
+                        id="telefone"
+                        name="telefone"
+                        class="form-control"
+                        placeholder="Digite seu telefone"
+                        value="<?= e($_POST['telefone'] ?? '') ?>"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required" for="senha">Senha</label>
+                    <input
+                        type="password"
+                        id="senha"
+                        name="senha"
+                        class="form-control"
+                        placeholder="Digite sua senha"
+                        required
+                        minlength="6"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required" for="confirmar_senha">Confirmar Senha</label>
+                    <input
+                        type="password"
+                        id="confirmar_senha"
+                        name="confirmar_senha"
+                        class="form-control"
+                        placeholder="Confirme sua senha"
+                        required
+                        minlength="6"
+                    >
+                </div>
+
+                <div class="form-group mt-2">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        Cadastrar
+                    </button>
+                </div>
+
+                <div class="text-center mt-2">
+                    <p class="text-muted">
+                        Já tem conta? <a href="index.php">Faça login</a>
+                    </p>
+                </div>
+            </form>
         </div>
     </div>
-    
+
     <script src="../assets/js/main.js"></script>
 </body>
 </html>
-

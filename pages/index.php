@@ -33,23 +33,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (empty($errors)) {
         try {
-            $pdo = getConnection();
-            
-            // Busca por username ou email
             $mysqli = getConnection();
 
             $stmt = $mysqli->prepare("
-                  SELECT id, username, nome_completo, email, senha, role, status 
-                 FROM usuarios 
-                 WHERE (username = ? OR email = ?)
-                 LIMIT 1
-             ");
-                $stmt->bind_param("ss", $login, $login);
-                $stmt->execute();
+                SELECT id, username, nome_completo, email, senha, role, status
+                FROM usuarios
+                WHERE (username = ? OR email = ?)
+                LIMIT 1
+            ");
+            $stmt->bind_param("ss", $login, $login);
+            $stmt->execute();
             $result = $stmt->get_result();
             $user = $result->fetch_assoc();
 
-            
             if ($user && password_verify($senha, $user['senha'])) {
                 // Verifica se está ativo
                 if ($user['status'] !== 'ativo') {
@@ -63,7 +59,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'email' => $user['email'],
                         'role' => $user['role']
                     ];
-                    
+
+                    // Regenera ID da sessão por segurança
+                    session_regenerate_id(true);
+
                     // Redireciona conforme o tipo de usuário
                     if ($user['role'] === 'admin') {
                         redirect('admin/dashboard.php');
@@ -74,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $errors[] = 'Usuário ou senha inválidos.';
             }
-        } catch (PDOException $e) {
+        } catch (mysqli_sql_exception $e) {
             error_log("Erro no login: " . $e->getMessage());
             $errors[] = 'Erro ao processar login. Tente novamente.';
         }
